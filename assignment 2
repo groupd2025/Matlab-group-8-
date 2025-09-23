@@ -1,0 +1,138 @@
+%% Load and Prepare Data
+data = readtable('ALL_TABLES.xlsx', 'Sheet', 'T2024');
+
+% Convert categorical variables to categorical type
+data.Model = categorical(data.Model);
+data.Region = categorical(data.Region);
+data.Color = categorical(data.Color);
+data.Fuel_Type = categorical(data.Fuel_Type);
+data.Transmission = categorical(data.Transmission);
+data.Sales_Classification = categorical(data.Sales_Classification);
+
+%% 1. Price Distribution by Model
+figure('Position', [100, 100, 1200, 600]);
+boxplot(data.Price_USD, data.Model);
+title('Price Distribution by Car Model');
+xlabel('Model');
+ylabel('Price (USD)');
+xtickangle(45);
+grid on;
+saveas(gcf, 'Price_Distribution_by_Model.png');
+
+%% 2. Average Price by Region and Fuel Type
+figure('Position', [100, 100, 1200, 600]);
+avg_price = grpstats(data, {'Region', 'Fuel_Type'}, 'mean', 'DataVars', 'Price_USD');
+h = heatmap(avg_price, 'Region', 'Fuel_Type', 'ColorVariable', 'mean_Price_USD');
+h.Title = 'Average Price by Region and Fuel Type';
+h.XLabel = 'Region';
+h.YLabel = 'Fuel Type';
+saveas(gcf, 'Avg_Price_by_Region_FuelType.png');
+
+%% 3. Sales Volume by Region
+figure('Position', [100, 100, 1000, 600]);
+sales_by_region = groupsummary(data, 'Region', 'sum', 'Sales_Volume');
+bar(sales_by_region.sum_Sales_Volume);
+title('Total Sales Volume by Region');
+xlabel('Region');
+ylabel('Total Sales Volume');
+xticklabels(sales_by_region.Region);
+xtickangle(45);
+grid on;
+saveas(gcf, 'Sales_Volume_by_Region.png');
+
+%% 4. Mileage vs Price colored by Fuel Type
+figure('Position', [100, 100, 1000, 600]);
+gscatter(data.Mileage_KM, data.Price_USD, data.Fuel_Type);
+title('Mileage vs Price by Fuel Type');
+xlabel('Mileage (KM)');
+ylabel('Price (USD)');
+legend('Location', 'best');
+grid on;
+saveas(gcf, 'Mileage_vs_Price_by_FuelType.png');
+
+%% 5. Engine Size Distribution by Model
+figure('Position', [100, 100, 1200, 600]);
+boxplot(data.Engine_Size_L, data.Model);
+title('Engine Size Distribution by Model');
+xlabel('Model');
+ylabel('Engine Size (L)');
+xtickangle(45);
+grid on;
+saveas(gcf, 'Engine_Size_by_Model.png');
+
+%% 6. Sales Classification Proportion
+figure('Position', [100, 100, 800, 600]);
+classification_counts = countcats(data.Sales_Classification);
+pie(classification_counts, categories(data.Sales_Classification));
+title('Proportion of Sales Classification');
+saveas(gcf, 'Sales_Classification_Proportion.png');
+
+
+%% 8. Price vs Engine Size with Regression
+figure('Position', [100, 100, 1000, 600]);
+scatter(data.Engine_Size_L, data.Price_USD, 30, 'filled', 'MarkerFaceAlpha', 0.6);
+hold on;
+
+% Fit linear regression
+p = polyfit(data.Engine_Size_L, data.Price_USD, 1);
+x_fit = linspace(min(data.Engine_Size_L), max(data.Engine_Size_L), 100);
+y_fit = polyval(p, x_fit);
+plot(x_fit, y_fit, 'r-', 'LineWidth', 2);
+
+title('Price vs Engine Size with Regression Line');
+xlabel('Engine Size (L)');
+ylabel('Price (USD)');
+legend('Data Points', sprintf('Regression: y = %.2fx + %.2f', p(1), p(2)), 'Location', 'best');
+grid on;
+hold off;
+saveas(gcf, 'Price_vs_Engine_Size_Regression.png');
+
+%% 10. Correlation Heatmap of Numerical Variables
+figure('Position', [100, 100, 800, 600]);
+numeric_vars = data(:, {'Engine_Size_L', 'Mileage_KM', 'Price_USD', 'Sales_Volume'});
+corr_matrix = corr(table2array(numeric_vars), 'Rows', 'complete');
+h = heatmap(corr_matrix);
+h.Title = 'Correlation Matrix of Numerical Variables';
+h.XDisplayLabels = {'Engine Size', 'Mileage', 'Price', 'Sales Volume'};
+h.YDisplayLabels = {'Engine Size', 'Mileage', 'Price', 'Sales Volume'};
+h.Colormap = parula;
+saveas(gcf, 'Correlation_Matrix.png');
+
+%% 11. Price Distribution by Sales Classification
+figure('Position', [100, 100, 1000, 600]);
+boxplot(data.Price_USD, data.Sales_Classification);
+title('Price Distribution by Sales Classification');
+xlabel('Sales Classification');
+ylabel('Price (USD)');
+grid on;
+saveas(gcf, 'Price_Distribution_by_Sales_Classification.png');
+
+%% 12. Most Popular Models by Sales Volume
+figure('Position', [100, 100, 1000, 600]);
+sales_by_model = groupsummary(data, 'Model', 'sum', 'Sales_Volume');
+[~, idx] = sort(sales_by_model.sum_Sales_Volume, 'descend');
+top_models = sales_by_model(idx(1:min(10, height(sales_by_model))), :);
+bar(top_models.sum_Sales_Volume);
+title('Top 10 Models by Sales Volume');
+xlabel('Model');
+ylabel('Sales Volume');
+xticklabels(top_models.Model);
+xtickangle(45);
+grid on;
+saveas(gcf, 'Top_Models_by_Sales_Volume.png');
+
+
+%% 14. 3D Scatter Plot: Price vs Mileage vs Engine Size
+figure('Position', [100, 100, 1000, 800]);
+scatter3(data.Mileage_KM, data.Engine_Size_L, data.Price_USD, 30, data.Price_USD, 'filled');
+colorbar;
+title('3D Scatter: Price vs Mileage vs Engine Size');
+xlabel('Mileage (KM)');
+ylabel('Engine Size (L)');
+zlabel('Price (USD)');
+grid on;
+saveas(gcf, '3D_Scatter_Price_Mileage_EngineSize.png');
+
+
+%% Close all figures
+close all;
